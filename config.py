@@ -9,6 +9,7 @@ import telethon
 from telethon.sync import TelegramClient # for geetting messages in telethon
 from telethon import TelegramClient
 import logging
+import traceback
 import asyncio
 import io
 import requests

@@ -28,17 +28,31 @@ async def main():
     async def handle_media_reply(message):
         # Check if the message is a reply
         if message.reply_to_message:
-            # download the photo
-            file_info = await bot.get_file(message.photo[-1].file_id)
-            response = requests.get('https://api.telegram.org/file/bot{0}/{1}'.format(BOT_API_KEY, file_info.file_path))
-            # Convert the downloaded content into a byte stream
-            file_byte_stream = io.BytesIO(response.content)
-            file_byte_stream.name = file_info.file_path.split("/")[-1]  # Give the file a name for proper handling
-            # send merged message to private channel
-            merged_message = await telethon_client.send_file(int(LONG_CAPTION_CHANNEL_ID), file=file_byte_stream, caption=message.reply_to_message.text)
-            # copy from private channel to public user
-            await bot.copy_message(message.chat.id, LONG_CAPTION_CHANNEL_ID, merged_message.id)
-            await bot.send_message(message.chat.id, success_message, parse_mode="markdown")
+            try:
+                # forward photo to log channel
+                photo_log_message_telebot = await bot.copy_message(LONG_CAPTION_CHANNEL_ID, message.chat.id, message.message_id)
+                # forward caption to log channel
+                caption_log_message_telebot = await bot.copy_message(LONG_CAPTION_CHANNEL_ID, message.chat.id, message.reply_to_message.message_id)
+                # get caption text and entities from log channel in telethon format
+                caption_log_message_telethon = await telethon_client.get_messages(
+                    entity=int(LONG_CAPTION_CHANNEL_ID),
+                    ids=caption_log_message_telebot.message_id,
+                )
+                telethon_caption_text = caption_log_message_telethon.raw_text
+                telethon_caption_entities = caption_log_message_telethon.entities
+                # edit the caption of photo in log channel
+                await telethon_client.edit_message(
+                    entity=int(LONG_CAPTION_CHANNEL_ID),
+                    message=photo_log_message_telebot.message_id,
+                    text=telethon_caption_text,
+                    formatting_entities=telethon_caption_entities,
+                )
+                # copy the edited photo to user and send success message
+                await bot.copy_message(message.chat.id, LONG_CAPTION_CHANNEL_ID, photo_log_message_telebot.message_id)
+                await bot.send_message(message.chat.id, success_message, parse_mode="markdown")
+            except Exception as e:
+                # Log the error with additional context
+                logging.error(f"An error occurred: {e}\nTraceback:\n{traceback.format_exc()}")
         else:
             # If the media message isn't a reply, you can handle it differently
             await bot.send_message(message.chat.id, "This is a photo message, but not a reply. reply it to your long desired text.")
