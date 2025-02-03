@@ -21,18 +21,18 @@ async def main():
     # Define a basic command handler
     @bot.message_handler(commands=['start'])
     async def start_command_(message):
-        await bot.send_message(message.chat.id, "Hi. send a large text, then send an image replied to it. I will merge them and send it to you.")
+        await bot.send_message(message.chat.id, "Hi. send a media like photo, video, voice, ... then send some large text replied to it. I will merge them and bring back to you.")
         
     # Function to handle replies to media messages
-    @bot.message_handler(content_types=['photo'])
+    @bot.message_handler(content_types=['text'])
     async def handle_media_reply(message):
         # Check if the message is a reply
         if message.reply_to_message:
             try:
                 # forward photo to log channel
-                photo_log_message_telebot = await bot.copy_message(LONG_CAPTION_CHANNEL_ID, message.chat.id, message.message_id)
+                photo_log_message_telebot = await bot.copy_message(LONG_CAPTION_CHANNEL_ID, message.chat.id, message.reply_to_message.message_id)
                 # forward caption to log channel
-                caption_log_message_telebot = await bot.copy_message(LONG_CAPTION_CHANNEL_ID, message.chat.id, message.reply_to_message.message_id)
+                caption_log_message_telebot = await bot.copy_message(LONG_CAPTION_CHANNEL_ID, message.chat.id, message.message_id)
                 # get caption text and entities from log channel in telethon format
                 caption_log_message_telethon = await telethon_client.get_messages(
                     entity=int(LONG_CAPTION_CHANNEL_ID),
@@ -55,7 +55,7 @@ async def main():
                 logging.error(f"An error occurred: {e}\nTraceback:\n{traceback.format_exc()}")
         else:
             # If the media message isn't a reply, you can handle it differently
-            await bot.send_message(message.chat.id, "This is a photo message, but not a reply. reply it to your long desired text.")
+            await bot.send_message(message.chat.id, "your text message should be replied to a media message.")
     
     # Set bot to infinity polling
     try:
