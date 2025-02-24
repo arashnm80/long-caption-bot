@@ -21,7 +21,7 @@ async def main():
     # Define a basic command handler
     @bot.message_handler(commands=['start'])
     async def start_command_(message):
-        await bot.send_message(message.chat.id, "Hi. send a media like photo, video, voice, ... then send some large text replied to it. I will merge them and bring back to you.")
+        await bot.send_message(message.chat.id, "Hi. send a media like photo, video, voice, ... then send some large text replied to it. I will merge them and bring back to you.\n\nmy video tutorial is available too: https://youtu.be/L\_hdOd8KGvQ")
         
     # Function to handle replies to media messages
     @bot.message_handler(content_types=['text'])
@@ -47,6 +47,8 @@ async def main():
                     text=telethon_caption_text,
                     formatting_entities=telethon_caption_entities,
                 )
+                # remove text from log channel
+                await bot.delete_message(LONG_CAPTION_CHANNEL_ID, caption_log_message_telebot.message_id)
                 # copy the edited photo to user and send success message
                 await bot.copy_message(message.chat.id, LONG_CAPTION_CHANNEL_ID, photo_log_message_telebot.message_id)
                 await bot.send_message(message.chat.id, success_message, parse_mode="markdown")
