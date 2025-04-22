@@ -13,6 +13,8 @@ import traceback
 import asyncio
 import io
 import requests
+import json
+from urllib.parse import urlparse
 
 ## app api
 TELEGRAM_APP_API_ID = os.environ.get('ARASHNM80_TELEGRAM_APP_API_ID')
@@ -23,8 +25,19 @@ session_name = "arashnm80"
 BOT_API_KEY = os.environ.get('LONG_CAPTION_BOT_API_KEY')
 LONG_CAPTION_CHANNEL_ID = os.environ.get('LONG_CAPTION_CHANNEL_ID')
 
-# proxy
-warp_proxy = ('socks5', '127.0.0.1', 40000)
+# warp socks proxy
+warp_proxies = os.environ["WARP_PROXIES"]
+warp_proxies = json.loads(warp_proxies)
+# parse it and convert to a tuple to be used by telethon or other libraries
+warp_proxy = urlparse(warp_proxies['http'])
+warp_proxy = (
+    warp_proxy.scheme.replace('h', ''),  # 'socks5h' → 'socks5'
+    warp_proxy.hostname,
+    warp_proxy.port,
+    bool(warp_proxy.username and warp_proxy.password),
+    warp_proxy.username,
+    warp_proxy.password
+)
 
 # messages
 # success_message = \

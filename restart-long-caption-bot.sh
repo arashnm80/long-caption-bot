@@ -21,5 +21,8 @@ SCRIPT_DIR=$(dirname "$(realpath "$0")")
 # Navigate to the script's directory
 cd "$SCRIPT_DIR"
 
+# activate virtual environment
+source "$SCRIPT_DIR/venv/bin/activate"
+
 # start python file of alfred with logging output to alfred.log
 nohup python3 "$SCRIPT_NAME" > /dev/null 2>&1 &

@@ -1,0 +1,5 @@
+telebot
+telethon
+aiohttp
+requests[socks]
+httpx[socks]
