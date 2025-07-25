@@ -52,6 +52,9 @@ async def main():
                 # copy the edited photo to user and send success message
                 await bot.copy_message(message.chat.id, LONG_CAPTION_CHANNEL_ID, photo_log_message_telebot.message_id)
                 await bot.send_message(message.chat.id, success_message, parse_mode="markdown")
+                # if caption was short and bot wansn't necessary
+                if len(message.text) < 1024:
+                    await bot.send_message(message.chat.id, short_caption_message, parse_mode="markdown")
             except Exception as e:
                 # Log the error with additional context
                 logging.error(f"An error occurred: {e}\nTraceback:\n{traceback.format_exc()}")

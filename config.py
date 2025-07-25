@@ -52,3 +52,10 @@ f"""
 If you have any feedback, I'll be glad to hear🙂
 @Arashnm80
 """
+
+short_caption_message = \
+f"""
+You used the bot correctly and i set the caption for you.
+
+But this caption wasn't really long and you could have set it without a bot or telegram premium too😄.
+"""

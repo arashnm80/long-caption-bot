@@ -5,7 +5,7 @@
 SCRIPT_NAME="long_caption_bot.py"
 
 # Find and kill the running process
-echo "Finding and killing the alfred process..."
+echo "Finding and killing the old process..."
 PID=$(pgrep -f "$SCRIPT_NAME")
 
 if [ -n "$PID" ]; then
@@ -15,8 +15,8 @@ else
     echo "No running process found."
 fi
 
-# get address of current script file (which is repository directory)
-SCRIPT_DIR=$(dirname "$(realpath "$0")")
+# change directory to script location
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Navigate to the script's directory
 cd "$SCRIPT_DIR"
