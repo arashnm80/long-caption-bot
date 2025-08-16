@@ -49,13 +49,15 @@ warp_proxy = (
 # """
 success_message = \
 f"""
-If you have any feedback, I'll be glad to hear🙂
-@Arashnm80
+Me:\n[Youtube](https://www.youtube.com/@Arashnm80) • [𝕏](https://x.com/Arashnm80) • [Github](https://github.com/arashnm80)
 """
 
 short_caption_message = \
 f"""
-You used the bot correctly and i set the caption for you.
+You used the bot correctly and i can the caption for you✅.
 
-But this caption wasn't really long and you could have set it without a bot or telegram premium too😄.
+But this caption isn't really long and you can set it without a bot or telegram premium too😄.
 """
+
+starpal_promotion_msg = \
+'''⭐️خرید ستاره تلگرام بدون احراز هویت و در کمتر از ۲ دقیقه!  👈  starpal.ir'''
