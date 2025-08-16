@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # this script restarts long caption bot
 # it closes the processes from before and starts it again
 
@@ -15,8 +17,8 @@ else
     echo "No running process found."
 fi
 
-# change directory to script location
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# get address of current script file (which is repository directory)
+SCRIPT_DIR=$(dirname "$(realpath "$0")")
 
 # Navigate to the script's directory
 cd "$SCRIPT_DIR"
