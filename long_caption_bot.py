@@ -70,6 +70,11 @@ async def main():
             # If the media message isn't a reply, you can handle it differently
             await bot.send_message(message.chat.id, "your text message should be replied to a media message.")
     
+    # Handle edited replies to media messages
+    @bot.edited_message_handler(content_types=['text'])
+    async def handle_edited_media_reply(message):
+        await handle_media_reply(message)
+    
     # Set bot to infinity polling
     try:
         await bot.infinity_polling()
