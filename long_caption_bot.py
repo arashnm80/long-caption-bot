@@ -14,10 +14,6 @@ logging.basicConfig(
 )
 
 async def main():
-    # Create async telethon client with telegram app api
-    telethon_client = TelegramClient(session_name, TELEGRAM_APP_API_ID, TELEGRAM_APP_API_HASH, proxy=warp_proxy)
-    await telethon_client.start()
-
     # Define a basic command handler
     @bot.message_handler(commands=['start'])
     async def start_command_(message):
@@ -38,19 +34,11 @@ async def main():
                 photo_log_message_telebot = await bot.copy_message(LONG_CAPTION_CHANNEL_ID, message.chat.id, message.reply_to_message.message_id)
                 # forward caption to log channel
                 caption_log_message_telebot = await bot.copy_message(LONG_CAPTION_CHANNEL_ID, message.chat.id, message.message_id)
-                # get caption text and entities from log channel in telethon format
-                caption_log_message_telethon = await telethon_client.get_messages(
-                    entity=int(LONG_CAPTION_CHANNEL_ID),
-                    ids=caption_log_message_telebot.message_id,
-                )
-                telethon_caption_text = caption_log_message_telethon.raw_text
-                telethon_caption_entities = caption_log_message_telethon.entities
-                # edit the caption of photo in log channel
-                await telethon_client.edit_message(
-                    entity=int(LONG_CAPTION_CHANNEL_ID),
-                    message=photo_log_message_telebot.message_id,
-                    text=telethon_caption_text,
-                    formatting_entities=telethon_caption_entities,
+                # private-router applies formatted caption onto the media message
+                await private_router_apply_caption(
+                    LONG_CAPTION_CHANNEL_ID,
+                    photo_log_message_telebot.message_id,
+                    caption_log_message_telebot.message_id,
                 )
                 # remove text from log channel
                 await bot.delete_message(LONG_CAPTION_CHANNEL_ID, caption_log_message_telebot.message_id)
@@ -59,8 +47,9 @@ async def main():
                 
                 # starpal promotion
                 if message.from_user.language_code == "fa":
-                    await bot.send_message(message.chat.id, starpal_promotion_msg, parse_mode="markdown")
-                    await bot.send_message(LONG_CAPTION_CHANNEL_ID, f"⭐️ starpal promotion for iranian user")
+                    # await bot.send_message(message.chat.id, starpal_promotion_msg, parse_mode="markdown")
+                    # await bot.send_message(LONG_CAPTION_CHANNEL_ID, f"⭐️ starpal promotion for iranian user")
+                    pass
                 else:
                     await bot.send_message(message.chat.id, success_message, parse_mode="markdown")
             except Exception as e:
@@ -70,14 +59,7 @@ async def main():
             # If the media message isn't a reply, you can handle it differently
             await bot.send_message(message.chat.id, "your text message should be replied to a media message.")
     
-    # Set bot to infinity polling
-    try:
-        await bot.infinity_polling()
-    
-    finally:
-        # Always ensure Telethon client disconnects, even on error
-        print("Disconnecting Telethon client...")
-        await telethon_client.disconnect()
+    await bot.infinity_polling()
 
 # Entry point
 if __name__ == "__main__":

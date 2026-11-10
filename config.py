@@ -4,40 +4,21 @@ import telebot
 from telebot.async_telebot import AsyncTeleBot
 from telebot import types
 from telebot.types import InlineQueryResultArticle, InputTextMessageContent
-# telethon
-import telethon
-from telethon.sync import TelegramClient # for geetting messages in telethon
-from telethon import TelegramClient
 import logging
 import traceback
 import asyncio
 import io
 import requests
 import json
-from urllib.parse import urlparse
+import httpx
 
-## app api
-TELEGRAM_APP_API_ID = os.environ.get('ARASHNM80_TELEGRAM_APP_API_ID')
-TELEGRAM_APP_API_HASH= os.environ.get('ARASHNM80_TELEGRAM_APP_API_HASH')
-TELEGRAM_PHONE_NUMBER= os.environ.get('ARASHNM80_TELEGRAM_PHONE_NUMBER')
-session_name = "arashnm80"
 ## bot
 BOT_API_KEY = os.environ.get('LONG_CAPTION_BOT_API_KEY')
 LONG_CAPTION_CHANNEL_ID = os.environ.get('LONG_CAPTION_CHANNEL_ID')
 
-# warp socks proxy
-warp_proxies = os.environ["WARP_PROXIES"]
-warp_proxies = json.loads(warp_proxies)
-# parse it and convert to a tuple to be used by telethon or other libraries
-warp_proxy = urlparse(warp_proxies['http'])
-warp_proxy = (
-    warp_proxy.scheme.replace('h', ''),  # 'socks5h' → 'socks5'
-    warp_proxy.hostname,
-    warp_proxy.port,
-    bool(warp_proxy.username and warp_proxy.password),
-    warp_proxy.username,
-    warp_proxy.password
-)
+## private-router (owns the Telethon user session)
+PRIVATE_ROUTER_URL = os.environ.get('PRIVATE_ROUTER_URL', 'http://127.0.0.1:3010').rstrip('/')
+PRIVATE_ROUTER_TOKEN = os.environ.get('PRIVATE_ROUTER_TOKEN', '')
 
 # messages
 # success_message = \
@@ -61,3 +42,23 @@ But this caption isn't really long and you can set it without a bot or telegram 
 
 starpal_promotion_msg = \
 '''⭐️خرید ستاره تلگرام بدون احراز هویت و در کمتر از ۲ دقیقه!  👈  starpal.ir'''
+
+
+async def private_router_apply_caption(chat_id, media_message_id, caption_message_id):
+    """Ask private-router to copy formatted caption onto the media message."""
+    if not PRIVATE_ROUTER_TOKEN:
+        raise RuntimeError('PRIVATE_ROUTER_TOKEN is not set')
+    headers = {'Authorization': f'Bearer {PRIVATE_ROUTER_TOKEN}'}
+    payload = {
+        'chat_id': int(chat_id),
+        'media_message_id': int(media_message_id),
+        'caption_message_id': int(caption_message_id),
+    }
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        response = await client.post(
+            f'{PRIVATE_ROUTER_URL}/v1/messages/apply-caption',
+            headers=headers,
+            json=payload,
+        )
+        response.raise_for_status()
+        return response.json()
