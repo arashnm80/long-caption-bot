@@ -7,5 +7,6 @@ Telethon user operations go through **private-router** (`PRIVATE_ROUTER_URL` + `
 - ensure private-router is up: `curl -s http://127.0.0.1:3010/health`
 - `./restart-long-caption-bot.sh`
 
-### to-do
-- support caption for media group (we can check media_group_id in a small timeframe to bind the pack together)
+### albums
+- Bot buffers incoming `media_group_id` items, then copies the whole album when you reply with long text (or reply with an album to long text).
+- Caption is applied to the first item of the album, same as Telegram’s native album caption.
