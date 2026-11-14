@@ -7,3 +7,4 @@ venv/
 *.session-journal
 *.log
 test.py
+blocked_users.json

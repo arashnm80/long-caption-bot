@@ -1,4 +1,16 @@
 from functions import *
+from blocklist import (
+    block_toggle_markup,
+    block_user,
+    format_sender_card,
+    get_blocked,
+    is_admin,
+    is_blocked,
+    remember_sender,
+    remember_sender_entry,
+    sender_meta,
+    unblock_user,
+)
 
 bot = AsyncTeleBot(BOT_API_KEY,
                    disable_web_page_preview=True,
@@ -46,7 +58,26 @@ def _caption_text(msg) -> str:
     return (msg.text or msg.caption or "") if msg else ""
 
 
-async def merge_and_return(chat_id, media_message_ids, caption_message_id, language_code):
+def _sender_from_message(message):
+    return getattr(message, "from_user", None)
+
+
+async def _post_sender_card(user) -> None:
+    """Post username/name/id + block button under the captioned media in the log channel."""
+    if not user:
+        return
+    remember_sender(user)
+    await bot.send_message(
+        LONG_CAPTION_CHANNEL_ID,
+        format_sender_card(user.id, user=user),
+        parse_mode="HTML",
+        reply_markup=block_toggle_markup(user.id),
+    )
+
+
+async def merge_and_return(
+    chat_id, media_message_ids, caption_message_id, language_code, from_user=None
+):
     """Copy media (single or album) + caption to the log channel, apply caption, return media to user."""
     if len(media_message_ids) == 1:
         media_log = await bot.copy_message(
@@ -69,6 +100,7 @@ async def merge_and_return(chat_id, media_message_ids, caption_message_id, langu
         caption_log.message_id,
     )
     await bot.delete_message(LONG_CAPTION_CHANNEL_ID, caption_log.message_id)
+    await _post_sender_card(from_user)
 
     if len(media_log_ids) == 1:
         await bot.copy_message(chat_id, LONG_CAPTION_CHANNEL_ID, media_log_ids[0])
@@ -80,14 +112,18 @@ async def merge_and_return(chat_id, media_message_ids, caption_message_id, langu
         # a later text reply to any item still resolves the whole pack.
         remember_album_ids(chat_id, [item.message_id for item in returned])
 
-    if language_code == "fa":
-        pass
-    else:
+    if should_send_album_tip():
+        await bot.send_message(chat_id, album_tip, parse_mode="markdown")
+    elif language_code != "fa":
         await bot.send_message(chat_id, success_message, parse_mode="markdown")
 
 
 async def _merge_media_replied_to_text(message) -> None:
     """Media (or full album) was replied to a caption text message."""
+    user = _sender_from_message(message)
+    if user and is_blocked(user.id):
+        return
+
     reply = message.reply_to_message
     caption = _caption_text(reply)
     if len(caption) < 1024:
@@ -107,20 +143,132 @@ async def _merge_media_replied_to_text(message) -> None:
         media_ids,
         reply.message_id,
         message.from_user.language_code,
+        from_user=user,
     )
 
 
 async def main():
     @bot.message_handler(commands=["start"])
     async def start_command_(message):
+        user = _sender_from_message(message)
+        if user and is_blocked(user.id):
+            return
+        text = (
+            "Hi. send a media like photo, video, voice, ... then send some large text "
+            "replied to it. I will merge them and bring back to you.\n\n"
+            "my video tutorial is available too: https://youtu.be/L\\_hdOd8KGvQ"
+        )
+        if is_admin(user):
+            text += (
+                "\n\n"
+                "*Admin commands:*\n"
+                "/blocked — list blocked users (with Unblock buttons)\n"
+                "/block `<user_id>` — block a user\n"
+                "/unblock `<user_id>` — unblock a user"
+            )
+        await bot.send_message(message.chat.id, text, parse_mode="markdown")
+
+    @bot.message_handler(commands=["blocked"])
+    async def blocked_command(message):
+        user = _sender_from_message(message)
+        if not is_admin(user):
+            return
+        blocked = get_blocked()
+        if not blocked:
+            await bot.send_message(message.chat.id, "No blocked users.")
+            return
+        await bot.send_message(
+            message.chat.id, f"Blocked users: {len(blocked)}"
+        )
+        for uid, entry in sorted(blocked.items(), key=lambda kv: kv[0]):
+            remember_sender_entry(uid, entry)
+            await bot.send_message(
+                message.chat.id,
+                format_sender_card(uid, entry=entry),
+                parse_mode="HTML",
+                reply_markup=block_toggle_markup(uid),
+            )
+
+    @bot.message_handler(commands=["block"])
+    async def block_command(message):
+        user = _sender_from_message(message)
+        if not is_admin(user):
+            return
+        parts = (message.text or "").split()
+        if len(parts) < 2 or not parts[1].isdigit():
+            await bot.send_message(message.chat.id, "Usage: /block <user_id>")
+            return
+        uid = int(parts[1])
+        block_user(uid)
         await bot.send_message(
             message.chat.id,
-            "Hi. send a media like photo, video, voice, ... then send some large text replied to it. I will merge them and bring back to you.\n\nmy video tutorial is available too: https://youtu.be/L\\_hdOd8KGvQ",
-            parse_mode="markdown",
+            format_sender_card(uid),
+            parse_mode="HTML",
+            reply_markup=block_toggle_markup(uid),
         )
+
+    @bot.message_handler(commands=["unblock"])
+    async def unblock_command(message):
+        user = _sender_from_message(message)
+        if not is_admin(user):
+            return
+        parts = (message.text or "").split()
+        if len(parts) < 2 or not parts[1].isdigit():
+            await bot.send_message(message.chat.id, "Usage: /unblock <user_id>")
+            return
+        uid = int(parts[1])
+        unblock_user(uid)
+        await bot.send_message(
+            message.chat.id,
+            format_sender_card(uid),
+            parse_mode="HTML",
+            reply_markup=block_toggle_markup(uid),
+        )
+
+    @bot.callback_query_handler(
+        func=lambda call: call.data.startswith(("blk:", "unblk:"))
+    )
+    async def block_toggle_callback(call):
+        user = call.from_user
+        if not is_admin(user):
+            await bot.answer_callback_query(call.id)
+            return
+        try:
+            action, uid_str = call.data.split(":", 1)
+            uid = int(uid_str)
+        except (ValueError, AttributeError):
+            await bot.answer_callback_query(call.id, "Bad callback")
+            return
+
+        meta = sender_meta(uid)
+        if action == "blk":
+            entry = block_user(uid, meta=meta)
+            remember_sender_entry(uid, entry)
+            await bot.answer_callback_query(call.id, "Blocked")
+        else:
+            unblock_user(uid)
+            await bot.answer_callback_query(call.id, "Unblocked")
+
+        try:
+            await bot.edit_message_text(
+                format_sender_card(uid, entry=sender_meta(uid)),
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,
+                parse_mode="HTML",
+                reply_markup=block_toggle_markup(uid),
+            )
+        except Exception:
+            # Message may be identical or inaccessible; status still changed on disk.
+            logging.info(
+                "block toggle ok but edit failed: %s", traceback.format_exc()
+            )
 
     @bot.message_handler(content_types=MEDIA_CONTENT_TYPES)
     async def buffer_media(message):
+        user = _sender_from_message(message)
+        if user and is_blocked(user.id):
+            return
+
         # Needed so a later text reply to any album item can copy the whole pack.
         remember_album_message(message)
 
@@ -159,8 +307,15 @@ async def main():
                 f"An error occurred: {e}\nTraceback:\n{traceback.format_exc()}"
             )
 
-    @bot.message_handler(content_types=["text"])
+    @bot.message_handler(
+        content_types=["text"],
+        func=lambda m: not (m.text or "").startswith("/"),
+    )
     async def handle_media_reply(message):
+        user = _sender_from_message(message)
+        if user and is_blocked(user.id):
+            return
+
         if not message.reply_to_message:
             await bot.send_message(
                 message.chat.id,
@@ -197,6 +352,7 @@ async def main():
                 media_ids,
                 message.message_id,
                 message.from_user.language_code,
+                from_user=user,
             )
         except Exception as e:
             logging.error(

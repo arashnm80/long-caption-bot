@@ -11,6 +11,7 @@ import io
 import requests
 import json
 import httpx
+from datetime import date
 
 ## bot
 BOT_API_KEY = os.environ.get('LONG_CAPTION_BOT_API_KEY')
@@ -42,6 +43,17 @@ But this caption isn't really long and you can set it without a bot or telegram 
 
 starpal_promotion_msg = \
 '''⭐️خرید ستاره تلگرام بدون احراز هویت و در کمتر از ۲ دقیقه!  👈  starpal.ir'''
+
+# Album tip (auto-off after this date); shown after a successful merge
+ALBUM_TIP_UNTIL = date(2026, 12, 14)
+album_tip = \
+'''🆕 New: the bot now supports *albums* with long captions too.
+
+Send several photos/videos, then reply with a long text to any item — the caption applies to the *whole album*.'''
+
+
+def should_send_album_tip() -> bool:
+    return date.today() <= ALBUM_TIP_UNTIL
 
 
 async def private_router_apply_caption(chat_id, media_message_id, caption_message_id):
